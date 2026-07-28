@@ -1,0 +1,63 @@
+[package]
+name = "hanzo-crypto"
+version = "0.1.0"
+edition = "2021"
+authors = ["Hanzo Team"]
+description = "Modern post-quantum cryptography library with NIST-standardized algorithms"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/hanzo/crypto"
+keywords = ["crypto", "post-quantum", "ml-kem", "ml-dsa", "pqc"]
+categories = ["cryptography", "no-std"]
+
+[dependencies]
+# NIST-standardized post-quantum algorithms (Pure Rust - ARM compatible!)
+ml-kem = { workspace = true }       # ML-KEM (FIPS 203) - formerly Kyber
+ml-dsa = { workspace = true }       # ML-DSA (FIPS 204) - formerly Dilithium
+pqcrypto-hqc = { workspace = true } # HQC code-based cryptography
+pqcrypto-traits = { workspace = true } # Common traits for PQC
+
+# Symmetric cryptography
+blake3 = { workspace = true }             # BLAKE3 hashing
+chacha20poly1305 = { workspace = true }  # ChaCha20-Poly1305 AEAD
+aes-gcm = { workspace = true }           # AES-256-GCM
+
+# Additional cryptographic primitives
+sha3 = { workspace = true }           # SHA-3 family
+x25519-dalek = { workspace = true }   # X25519 key exchange (transitional)
+ed25519-dalek = { workspace = true }  # Ed25519 signatures (transitional)
+argon2 = { workspace = true }         # Password hashing
+
+# Utilities
+rand = { workspace = true }
+rand_core = { workspace = true }
+zeroize = { workspace = true }
+subtle = { workspace = true }
+hex = { workspace = true }
+base64 = { workspace = true }
+
+# Serialization
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+bincode = { workspace = true, optional = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+proptest = { workspace = true }
+quickcheck = { workspace = true }
+rand_chacha = "0.3"
+
+[features]
+default = ["std", "serialization"]
+std = []
+serialization = ["serde", "serde_json", "bincode"]
+no-std = []
+
+
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
