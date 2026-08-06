@@ -1,0 +1,27 @@
+# hanzoai/crypto — the post-quantum crypto crate (ML-KEM, ML-DSA, HQC, plus the
+# classical/symmetric primitives). A library: publishes to crates.io from a tag,
+# builds no image, deploys nowhere.
+#
+# The gate is the build and the suite, at all features — for a crypto crate the
+# feature matrix IS the API surface, and `no-std`/`serialization` are exactly
+# where a primitive quietly stops being compiled.
+#
+# READ THIS BEFORE CHASING A RED RUN. On this tree the gate fails at manifest
+# parse, and it is telling the truth: all 25 dependencies here are
+# `{ workspace = true }`, inherited from a workspace root that lives in NO git
+# repo — `~/work/hanzo/Cargo.toml`, a file that existed on one machine.
+# BACKUP-NOTE.md records this and keeps a verbatim copy as
+# workspace-root.Cargo.toml, which by its own account "is NOT used by a build
+# from this repo". So this crate cannot resolve, build, or publish from its own
+# checkout by anyone, anywhere, today.
+#
+# That is the defect, not the gate. The fix is to inline those 25 versions into
+# [dependencies] here (BACKUP-NOTE.md names it), which is a change to the crate
+# and not something CI should paper over. Until then the honest report is a red
+# run that names the cause, rather than a gate weakened until it agrees.
+test:
+  - name: build-and-test
+    run: |
+      set -e
+      cargo build --all-features --locked
+      cargo test --all-features --locked
