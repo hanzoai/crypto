@@ -9,7 +9,8 @@ fn main() -> Result<()> {
     // ML-KEM (NIST FIPS 203) - Post-quantum key encapsulation
     println!("1. ML-KEM-768 (formerly Kyber):");
     {
-        use ml_kem::{MlKem768, Encapsulate, Decapsulate};
+        use ml_kem::kem::{Decapsulate, Encapsulate};
+        use ml_kem::{KemCore, MlKem768};
 
         let mut rng = rand::thread_rng();
         let (dk, ek) = MlKem768::generate(&mut rng);
@@ -24,16 +25,20 @@ fn main() -> Result<()> {
     // ML-DSA (NIST FIPS 204) - Post-quantum signatures
     println!("\n2. ML-DSA-65 (formerly Dilithium):");
     {
-        use ml_dsa::{Ml_Dsa65, SigningKey, VerificationKey};
+        // ml-dsa is on rand_core 0.9 while ml-kem above is on 0.6, so the two
+        // blocks cannot share one RNG. OsRng is fallible there; unwrap_err gives
+        // the infallible CryptoRng key_gen asks for.
+        use ml_dsa::signature::rand_core::{OsRng, TryRngCore};
+        use ml_dsa::signature::{Signer, Verifier};
+        use ml_dsa::{KeyGen, MlDsa65};
 
-        let mut rng = rand::thread_rng();
-        let signing_key = SigningKey::generate(&mut rng).unwrap();
-        let verification_key = signing_key.verification_key();
+        let mut rng = OsRng.unwrap_err();
+        let keypair = MlDsa65::key_gen(&mut rng);
 
         let message = b"Hello, post-quantum world!";
-        let signature = signing_key.try_sign_with_rng(&mut rng, message).unwrap();
+        let signature = keypair.signing_key().sign(message);
 
-        verification_key.verify(message, &signature).unwrap();
+        keypair.verifying_key().verify(message, &signature).unwrap();
         println!("   ✓ Signature verification successful");
     }
 
@@ -90,6 +95,8 @@ fn main() -> Result<()> {
     println!("\n6. HQC-192:");
     {
         use hanzo_crypto::hqc::hqc192::*;
+        // as_bytes on a shared secret comes from this trait, not the type.
+        use pqcrypto_traits::kem::SharedSecret;
 
         let (pk, sk) = keypair();
         let (ss1, ct) = encapsulate(&pk);

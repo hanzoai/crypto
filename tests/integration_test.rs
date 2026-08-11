@@ -6,7 +6,8 @@ use rand::thread_rng;
 
 #[test]
 fn test_ml_kem_integration() {
-    use ml_kem::{MlKem768, Encapsulate, Decapsulate};
+    use ml_kem::kem::{Decapsulate, Encapsulate};
+    use ml_kem::{KemCore, MlKem768};
 
     let mut rng = thread_rng();
     let (dk, ek) = MlKem768::generate(&mut rng);
@@ -21,14 +22,22 @@ fn test_ml_kem_integration() {
 
 #[test]
 fn test_ml_dsa_integration() {
-    use ml_dsa::{Ml_Dsa65, SigningKey};
+    // ml-dsa is on rand_core 0.9 where ml-kem above is on 0.6, so this test
+    // takes its RNG from ml-dsa's own re-export. OsRng is fallible there;
+    // unwrap_err gives the infallible CryptoRng key_gen asks for.
+    use ml_dsa::signature::rand_core::{OsRng, TryRngCore};
+    use ml_dsa::signature::{Signer, Verifier};
+    use ml_dsa::{KeyGen, MlDsa65};
 
-    let mut rng = thread_rng();
-    let signing_key = SigningKey::generate(&mut rng).unwrap();
-    let verification_key = signing_key.verification_key();
+    let mut rng = OsRng.unwrap_err();
+    let keypair = MlDsa65::key_gen(&mut rng);
+    let signing_key = keypair.signing_key();
+    let verification_key = keypair.verifying_key();
 
     // Test multiple messages
-    let messages = [
+    // Typed as slices: each literal is its own [u8; N], so an untyped array of
+    // them has no single element type and never compiled.
+    let messages: [&[u8]; 4] = [
         b"Message 1",
         b"Message 2 with more content",
         b"",
@@ -36,7 +45,7 @@ fn test_ml_dsa_integration() {
     ];
 
     for msg in &messages {
-        let signature = signing_key.try_sign_with_rng(&mut rng, *msg).unwrap();
+        let signature = signing_key.sign(*msg);
         verification_key.verify(*msg, &signature).unwrap();
     }
 }

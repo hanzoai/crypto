@@ -6,7 +6,8 @@ fn main() {
     // Test ML-KEM (Pure Rust - no AVX2 issues!)
     println!("✓ ML-KEM-768 (FIPS 203):");
     {
-        use ml_kem::{MlKem768, KemCore};
+        use ml_kem::kem::{Decapsulate, Encapsulate};
+        use ml_kem::{KemCore, MlKem768};
         use rand::thread_rng;
 
         let mut rng = thread_rng();
@@ -20,14 +21,20 @@ fn main() {
     // Test ML-DSA (Pure Rust)
     println!("\n✓ ML-DSA-65 (FIPS 204):");
     {
-        use ml_dsa::MlDsa65;
-        use rand::thread_rng;
+        // ml-dsa is on rand_core 0.9 while ml-kem above is on 0.6, so the two
+        // blocks cannot share one RNG. Take ml-dsa's own re-export rather than
+        // add a second rand to the manifest.
+        use ml_dsa::signature::rand_core::{OsRng, TryRngCore};
+        use ml_dsa::signature::{Signer, Verifier};
+        use ml_dsa::{KeyGen, MlDsa65};
 
-        let mut rng = thread_rng();
-        let (sk, vk) = MlDsa65::generate(&mut rng).unwrap();
+        // OsRng is fallible in rand_core 0.9; unwrap_err gives the infallible
+        // CryptoRng that key_gen asks for.
+        let mut rng = OsRng.unwrap_err();
+        let keypair = MlDsa65::key_gen(&mut rng);
         let message = b"Quantum-resistant on ARM!";
-        let signature = sk.try_sign(&message[..]).unwrap();
-        vk.verify(&message[..], &signature).unwrap();
+        let signature = keypair.signing_key().sign(&message[..]);
+        keypair.verifying_key().verify(&message[..], &signature).unwrap();
         println!("  ✅ Digital signatures work!");
     }
 
